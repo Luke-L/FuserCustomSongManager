@@ -46,3 +46,58 @@ class MyTreeview(ttk.Treeview):
 
     def _sort_by_name_ignore_words(self, column, reverse):
         self._sort(column, reverse, "remove_the_a", self._sort_by_name_ignore_words)
+        
+    def _convert_camelot_display_to_sort_val(self, display_val):
+        """Converts a display Camelot key (e.g., "1A") to a sortable one (e.g., "01A")."""
+        if not display_val or display_val == "Unknown":
+            return display_val 
+
+        num_part_str = ""
+        letter_part_str = ""
+        is_num_part = True
+        for char_idx, char in enumerate(display_val):
+            if char.isdigit() and is_num_part:
+                num_part_str += char
+            else:
+                is_num_part = False # Once a non-digit is hit, the rest is letter part
+                letter_part_str += char
+        
+        if not num_part_str or not letter_part_str: # Malformed (e.g. "A", "1", "")
+             # Check if it's something like "10", "11", "12" without A/B, unlikely for Camelot
+            if num_part_str and not letter_part_str: # e.g. "10"
+                try:
+                    num_only = int(num_part_str)
+                    if 1 <= num_only <= 9: return f"0{num_only}"
+                    return num_part_str # "10", "11", "12"
+                except ValueError: return display_val # Should not happen
+            return display_val 
+
+        try:
+            num = int(num_part_str)
+            # Standard Camelot keys are 1-12 followed by A or B
+            if letter_part_str in ("A", "B"):
+                if 1 <= num <= 9:
+                    return f"0{num}{letter_part_str}" # e.g., "01A"
+                elif 10 <= num <= 12:
+                    return f"{num}{letter_part_str}" # e.g., "10A"
+            return display_val # If letter part is not A or B, or num out of range
+        except ValueError:
+            return display_val # num_part_str wasn't purely digits
+
+    def _sort_by_camelot(self, column, reverse):
+        """Sorts the column by Camelot key, converting display version to sortable version."""
+        l_to_sort = []
+        for k_child in self.get_children(''):
+            display_value = self.set(k_child, column)
+            sort_key = self._convert_camelot_display_to_sort_val(display_value)
+            l_to_sort.append((sort_key, k_child))
+
+        # Sort by the generated sort_key
+        l_to_sort.sort(key=lambda t: t[0], reverse=reverse)
+        
+        # Reorder items in the treeview
+        for index, (_, k) in enumerate(l_to_sort):
+            self.move(k, '', index)
+        
+        # Update the heading command for the next sort
+        self.heading(column, command=partial(self._sort_by_camelot, column, not reverse))

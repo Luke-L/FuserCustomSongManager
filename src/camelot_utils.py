@@ -3,45 +3,44 @@
 # Comprehensive mapping of musical keys to Camelot codes.
 # Keys are generally lowercase and include common variations and abbreviations
 # to make the lookup more robust.
+# Comprehensive mapping of musical keys to Camelot codes.
 CAMELOT_KEY_MAP = {
     # Major Keys
-    "b major": "1B", "bmaj": "1B",
-    "f# major": "2B", "f#maj": "2B", "f sharp major": "2B",
-    "gb major": "2B", "gbmaj": "2B", "g flat major": "2B",
-    "c# major": "3B", "c#maj": "3B", "c sharp major": "3B",
-    "db major": "3B", "dbmaj": "3B", "d flat major": "3B",
-    "ab major": "4B", "abmaj": "4B", "a flat major": "4B",
-    # "g# major": "4B", "g#maj": "4B", "g sharp major": "4B", # Enharmonically Ab Major
-    "eb major": "5B", "ebmaj": "5B", "e flat major": "5B",
-    # "d# major": "5B", "d#maj": "5B", "d sharp major": "5B", # Enharmonically Eb Major
-    "bb major": "6B", "bbmaj": "6B", "b flat major": "6B",
-    # "a# major": "6B", "a#maj": "6B", "a sharp major": "6B", # Enharmonically Bb Major
-    "f major": "7B", "fmaj": "7B",
-    "c major": "8B", "cmaj": "8B",
-    "g major": "9B", "gmaj": "9B",
+    "b major": "01B", "bmaj": "01B",
+    "f# major": "02B", "f#maj": "02B", "f sharp major": "02B",
+    "gb major": "02B", "gbmaj": "02B", "g flat major": "02B",
+    "c# major": "03B", "c#maj": "03B", "c sharp major": "03B",
+    "db major": "03B", "dbmaj": "03B", "d flat major": "03B",
+    "ab major": "04B", "abmaj": "04B", "a flat major": "04B",
+    "eb major": "05B", "ebmaj": "05B", "e flat major": "05B",
+    "bb major": "06B", "bbmaj": "06B", "b flat major": "06B",
+    "f major": "07B", "fmaj": "07B",
+    "c major": "08B", "cmaj": "08B",
+    "g major": "09B", "gmaj": "09B",
     "d major": "10B", "dmaj": "10B",
     "a major": "11B", "amaj": "11B",
     "e major": "12B", "emaj": "12B",
 
     # Minor Keys
-    "g# minor": "1A", "g#min": "1A", "g#m": "1A", "g sharp minor": "1A",
-    "ab minor": "1A", "abmin": "1A", "abm": "1A", "a flat minor": "1A", # Enharmonically G# minor
-    "d# minor": "2A", "d#min": "2A", "d#m": "2A", "d sharp minor": "2A",
-    "eb minor": "2A", "ebmin": "2A", "ebm": "2A", "e flat minor": "2A", # Enharmonically D# minor
-    "a# minor": "3A", "a#min": "3A", "a#m": "3A", "a sharp minor": "3A",
-    "bb minor": "3A", "bbmin": "3A", "bbm": "3A", "b flat minor": "3A", # Enharmonically A# minor
-    "f minor": "4A", "fmin": "4A", "fm": "4A",
-    "c minor": "5A", "cmin": "5A", "cm": "5A",
-    "g minor": "6A", "gmin": "6A", "gm": "6A",
-    "d minor": "7A", "dmin": "7A", "dm": "7A",
-    "a minor": "8A", "amin": "8A", "am": "8A",
-    "e minor": "9A", "emin": "9A", "em": "9A",
+    "g# minor": "01A", "g#min": "01A", "g#m": "01A", "g sharp minor": "01A",
+    "ab minor": "01A", "abmin": "01A", "abm": "01A", "a flat minor": "01A",
+    "d# minor": "02A", "d#min": "02A", "d#m": "02A", "d sharp minor": "02A",
+    "eb minor": "02A", "ebmin": "02A", "ebm": "02A", "e flat minor": "02A",
+    "a# minor": "03A", "a#min": "03A", "a#m": "03A", "a sharp minor": "03A",
+    "bb minor": "03A", "bbmin": "03A", "bbm": "03A", "b flat minor": "03A",
+    "f minor": "04A", "fmin": "04A", "fm": "04A",
+    "c minor": "05A", "cmin": "05A", "cm": "05A",
+    "g minor": "06A", "gmin": "06A", "gm": "06A",
+    "d minor": "07A", "dmin": "07A", "dm": "07A",
+    "a minor": "08A", "amin": "08A", "am": "08A",
+    "e minor": "09A", "emin": "09A", "em": "09A",
     "b minor": "10A", "bmin": "10A", "bm": "10A",
     "f# minor": "11A", "f#min": "11A", "f#m": "11A", "f sharp minor": "11A",
-    "gb minor": "11A", "gbmin": "11A", "gbm": "11A", "g flat minor": "11A", # Enharmonically F# minor
+    "gb minor": "11A", "gbmin": "11A", "gbm": "11A", "g flat minor": "11A",
     "c# minor": "12A", "c#min": "12A", "c#m": "12A", "c sharp minor": "12A",
-    "db minor": "12A", "dbmin": "12A", "dbm": "12A", "d flat minor": "12A"  # Enharmonically C# minor
+    "db minor": "12A", "dbmin": "12A", "dbm": "12A", "d flat minor": "12A"
 }
+
 
 def get_camelot_key(original_key_str):
     """

@@ -8,6 +8,8 @@ from tkinter import filedialog as fd
 import tkinter.ttk as ttk
 from custom_treeview import MyTreeview
 from song_extract import extract_song
+from update_checker import check_for_update
+from camelot_utils import get_camelot_key # Added import
 import shutil
 import subprocess
 import time
@@ -16,8 +18,6 @@ import sys
 import re
 from configparser import ConfigParser
 import webbrowser
-from update_checker import check_for_update
-from camelot_utils import get_camelot_key # Added import
 
 # FUSER CUSTOM SONG MANAGER, by Lilly :)
 version_number = "1.1.2" # Consider updating if this is a new version with this change
@@ -30,6 +30,18 @@ fuser_alt_process_name = "FuserEOS-Win64-Shipping.exe"
 
 startupinfo_hideconsole = subprocess.STARTUPINFO()
 startupinfo_hideconsole.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+# NEW helper function
+def format_camelot_for_display(sortable_key):
+    """Converts a sortable Camelot key (e.g., "01A") to a display one (e.g., "1A")."""
+    if not sortable_key or sortable_key == "Unknown":
+        return sortable_key
+    if len(sortable_key) > 1 and sortable_key.startswith('0') and sortable_key[1].isdigit():
+        # Check if the part after '0' is indeed a single digit followed by A or B
+        if len(sortable_key) == 3 and sortable_key[2] in ('A', 'B'):
+             return sortable_key[1:] # "01A" -> "1A"
+    return sortable_key # Handles "10A", "11B", "12A", "Unknown", or already formatted
+
 
 # Helper functions
 def rating_to_star_text(rating_int):
@@ -575,41 +587,43 @@ def refresh_list(clear_button):
     for item in songs_table_tree.get_children():
         songs_table_tree.delete(item)
 
-    # disable search button
     clear_button.configure(state='disabled')
-
-    # use function to get new songs from unlocked and disabled song paths
     db_connection = init_database(prog_properties.database_location, prog_properties.enabled_directory, prog_properties.disabled_directory, False)
-    db_songs = execute_db_read_query(db_connection, "SELECT * from songs ORDER BY filename")
+    db_songs_raw = execute_db_read_query(db_connection, "SELECT * from songs ORDER BY filename") # Renamed to avoid confusion
 
     # fill out tree view
-    for i in range(len(db_songs)):
-        original_db_tuple = db_songs[i]
-
+    processed_songs_for_treeview = []
+    for original_db_tuple in db_songs_raw:
         star_string = rating_to_star_text(original_db_tuple[9])
         enabled_string = "☑" if (original_db_tuple[8] == 1) else "☐"
 
         key_name_str = SongKey(original_db_tuple[5]).name
         mode_name_str = SongMode(original_db_tuple[6]).name
         camelot_input_str = f"{key_name_str} {mode_name_str}"
-        camelot_value_str = get_camelot_key(camelot_input_str)
+        
+        sortable_camelot_value = get_camelot_key(camelot_input_str) # e.g., "01A"
+        display_camelot_value = format_camelot_for_display(sortable_camelot_value) # e.g., "1A"
 
-        db_songs[i] = (
+        processed_songs_for_treeview.append((
             original_db_tuple[0],  # filename
             original_db_tuple[1],  # song name
             original_db_tuple[2],  # artist
             original_db_tuple[3],  # year
-            Genres(original_db_tuple[4]).name,  # genre name
-            key_name_str,  # key name
-            mode_name_str,  # mode name
+            Genres(original_db_tuple[4]).name,
+            key_name_str,
+            mode_name_str,
             original_db_tuple[7],  # bpm
-            enabled_string,       # calculated
-            star_string,          # calculated
+            enabled_string,
+            star_string,
             original_db_tuple[10], # notes
             original_db_tuple[11], # author
-            camelot_value_str      # NEW: Camelot Key
-        )
-        songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
+            display_camelot_value  # USE DISPLAY VERSION
+        ))
+    
+    for i, song_display_tuple in enumerate(processed_songs_for_treeview):
+        songs_table_tree.insert(parent="", index='end', iid=i, text="", values=song_display_tuple)
+    
+    
     
 
 # Launches the game and deletes custom song cache if it exists
@@ -725,41 +739,30 @@ def add_song(treeview, prog_properties):
     time.sleep(0.1)
     print("finished init database")
 
-    # clear treeview and read all items from db
     for item in treeview.get_children():
         treeview.delete(item)
 
-    # implement delay so that database catches up
-    #time.sleep(1)
-    # refill treeview items
-    db_songs = execute_db_read_query(connection, "SELECT * from songs ORDER BY filename")
-    for i in range(len(db_songs)):
-        original_db_tuple = db_songs[i]
-        
+    db_songs_raw = execute_db_read_query(connection, "SELECT * from songs ORDER BY filename")
+    processed_songs_for_treeview = []
+    for original_db_tuple in db_songs_raw:
         star_string = rating_to_star_text(original_db_tuple[9])
         enabled_string = "☑" if (original_db_tuple[8] == 1) else "☐"
-
         key_name_str = SongKey(original_db_tuple[5]).name
         mode_name_str = SongMode(original_db_tuple[6]).name
         camelot_input_str = f"{key_name_str} {mode_name_str}"
-        camelot_value_str = get_camelot_key(camelot_input_str)
+        sortable_camelot_value = get_camelot_key(camelot_input_str)
+        display_camelot_value = format_camelot_for_display(sortable_camelot_value)
         
-        db_songs[i] = (
-            original_db_tuple[0],  # filename
-            original_db_tuple[1],  # song name
-            original_db_tuple[2],  # artist
-            original_db_tuple[3],  # year
-            Genres(original_db_tuple[4]).name,  # genre name
-            key_name_str,  # key name
-            mode_name_str,  # mode name
-            original_db_tuple[7],  # bpm
-            enabled_string,       # calculated
-            star_string,          # calculated
-            original_db_tuple[10], # notes
-            original_db_tuple[11], # author
-            camelot_value_str      # NEW: Camelot Key
-        )
-        treeview.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
+        processed_songs_for_treeview.append((
+            original_db_tuple[0], original_db_tuple[1], original_db_tuple[2], original_db_tuple[3],
+            Genres(original_db_tuple[4]).name, key_name_str, mode_name_str, original_db_tuple[7],
+            enabled_string, star_string, original_db_tuple[10], original_db_tuple[11],
+            display_camelot_value
+        ))
+
+    for i, song_display_tuple in enumerate(processed_songs_for_treeview):
+        treeview.insert(parent="", index='end', iid=i, text="", values=song_display_tuple)
+    connection.close()
 
     connection.close()
     if DEBUG:
@@ -812,80 +815,58 @@ def start_search(clear_button):
     # get query result from dialog window
     
     d = SearchDialog(window)
-    # (inside dialog window, create a query)
     if (d.result):
-        # do read query here
         print(d.result)
-        # clear tree view
         for item in songs_table_tree.get_children():
             songs_table_tree.delete(item)
-        # repopulate tree view with results from query
-        db_songs = execute_db_read_query(db_connection, d.result)
-        for i in range(len(db_songs)):
-            original_db_tuple = db_songs[i]
-            
+        
+        db_songs_raw = execute_db_read_query(db_connection, d.result)
+        processed_songs_for_treeview = []
+        for original_db_tuple in db_songs_raw:
             star_string = rating_to_star_text(original_db_tuple[9])
             enabled_string = "☑" if (original_db_tuple[8] == 1) else "☐"
-
             key_name_str = SongKey(original_db_tuple[5]).name
             mode_name_str = SongMode(original_db_tuple[6]).name
             camelot_input_str = f"{key_name_str} {mode_name_str}"
-            camelot_value_str = get_camelot_key(camelot_input_str)
+            sortable_camelot_value = get_camelot_key(camelot_input_str)
+            display_camelot_value = format_camelot_for_display(sortable_camelot_value)
 
-            db_songs[i] = (
-                original_db_tuple[0],  # filename
-                original_db_tuple[1],  # song name
-                original_db_tuple[2],  # artist
-                original_db_tuple[3],  # year
-                Genres(original_db_tuple[4]).name,  # genre name
-                key_name_str,  # key name
-                mode_name_str,  # mode name
-                original_db_tuple[7],  # bpm
-                enabled_string,       # calculated
-                star_string,          # calculated
-                original_db_tuple[10], # notes
-                original_db_tuple[11], # author
-                camelot_value_str      # NEW: Camelot Key
-            )
-            songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
-        # enable clear button
+            processed_songs_for_treeview.append((
+                original_db_tuple[0], original_db_tuple[1], original_db_tuple[2], original_db_tuple[3],
+                Genres(original_db_tuple[4]).name, key_name_str, mode_name_str, original_db_tuple[7],
+                enabled_string, star_string, original_db_tuple[10], original_db_tuple[11],
+                display_camelot_value
+            ))
+        
+        for i, song_display_tuple in enumerate(processed_songs_for_treeview):
+            songs_table_tree.insert(parent="", index='end', iid=i, text="", values=song_display_tuple)
         clear_button.configure(state='enabled')
     
 # Resets visual table to show all items from database
 def clear_search(clear_button):
-    # clear tree view
     for item in songs_table_tree.get_children():
         songs_table_tree.delete(item)
-    # repopulate tree view with results from query "SELECT * from songs"
-    db_songs = execute_db_read_query(db_connection, "SELECT * from songs ORDER BY filename")
-    for i in range(len(db_songs)):
-        original_db_tuple = db_songs[i]
-
+    
+    db_songs_raw = execute_db_read_query(db_connection, "SELECT * from songs ORDER BY filename")
+    processed_songs_for_treeview = []
+    for original_db_tuple in db_songs_raw:
         star_string = rating_to_star_text(original_db_tuple[9])
         enabled_string = "☑" if (original_db_tuple[8] == 1) else "☐"
-
         key_name_str = SongKey(original_db_tuple[5]).name
         mode_name_str = SongMode(original_db_tuple[6]).name
         camelot_input_str = f"{key_name_str} {mode_name_str}"
-        camelot_value_str = get_camelot_key(camelot_input_str)
+        sortable_camelot_value = get_camelot_key(camelot_input_str)
+        display_camelot_value = format_camelot_for_display(sortable_camelot_value)
 
-        db_songs[i] = (
-            original_db_tuple[0],  # filename
-            original_db_tuple[1],  # song name
-            original_db_tuple[2],  # artist
-            original_db_tuple[3],  # year
-            Genres(original_db_tuple[4]).name,  # genre name
-            key_name_str,  # key name
-            mode_name_str,  # mode name
-            original_db_tuple[7],  # bpm
-            enabled_string,       # calculated
-            star_string,          # calculated
-            original_db_tuple[10], # notes
-            original_db_tuple[11], # author
-            camelot_value_str      # NEW: Camelot Key
-        )
-        songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
-    # disable clear button
+        processed_songs_for_treeview.append((
+            original_db_tuple[0], original_db_tuple[1], original_db_tuple[2], original_db_tuple[3],
+            Genres(original_db_tuple[4]).name, key_name_str, mode_name_str, original_db_tuple[7],
+            enabled_string, star_string, original_db_tuple[10], original_db_tuple[11],
+            display_camelot_value
+        ))
+
+    for i, song_display_tuple in enumerate(processed_songs_for_treeview):
+        songs_table_tree.insert(parent="", index='end', iid=i, text="", values=song_display_tuple)
     clear_button.configure(state='disabled')
 
 def manager_update_check(notify_no_update_available = False):
@@ -1004,7 +985,7 @@ songs_table_tree.configure(xscrollcommand=songs_hori_scrollbar.set)
 songs_table_tree['columns'] = ("Filename", "Song Name", "Artist", "Year", "Genre", "Key", "Mode", "BPM", "Enabled?", "Rating", "Notes", "Author", "Camelot Key") # Added "Camelot Key"
 # Column formatting
 songs_table_tree.column("#0", width=0, stretch=tk.NO)
-songs_table_tree.column("Filename", anchor=tk.W, width=240)
+songs_table_tree.column("Filename", anchor=tk.W, width=120)
 songs_table_tree.column("Song Name", anchor=tk.W, width=240)
 songs_table_tree.column("Artist", anchor=tk.W, width=200)
 songs_table_tree.column("Year", anchor=tk.CENTER, width=40)
@@ -1032,7 +1013,7 @@ songs_table_tree.heading("Enabled?", text="Enabled?", sort_by='name', anchor=tk.
 songs_table_tree.heading("Rating", text="Rating", sort_by='name', anchor=tk.W)
 songs_table_tree.heading("Notes", text="Notes", sort_by='name', anchor=tk.W)
 songs_table_tree.heading("Author", text="Author", sort_by='name', anchor=tk.W)
-songs_table_tree.heading("Camelot Key", text="Camelot Key", sort_by='name', anchor=tk.W) # Added heading for Camelot Key
+songs_table_tree.heading("Camelot Key", text="Camelot Key", sort_by='camelot', anchor=tk.W) # MODIFIED sort_by
 
 for item in songs_table_tree['columns']: # This loop will now include "Camelot Key"
     songs_table_tree.heading(item, text=item, anchor=tk.W)
@@ -1368,36 +1349,38 @@ delete_song_button.configure(command=delete_song)
 
 # init song tree contents
 db_connection = init_database(prog_properties.database_location, prog_properties.enabled_directory, prog_properties.disabled_directory, False)
-db_songs = execute_db_read_query(db_connection, "SELECT * from songs ORDER BY filename") # List of raw DB tuples
+db_songs_raw = execute_db_read_query(db_connection, "SELECT * from songs ORDER BY filename")
 
-for i in range(len(db_songs)):
-    original_db_tuple = db_songs[i] # Current raw DB tuple for this iteration
-
+processed_songs_for_treeview_initial = [] # Use a new list name
+for original_db_tuple in db_songs_raw:
     star_string = rating_to_star_text(original_db_tuple[9])
     enabled_string = "☑" if (original_db_tuple[8] == 1) else "☐"
-
     key_name_str = SongKey(original_db_tuple[5]).name
     mode_name_str = SongMode(original_db_tuple[6]).name
     camelot_input_str = f"{key_name_str} {mode_name_str}"
-    camelot_value_str = get_camelot_key(camelot_input_str)
+    
+    sortable_camelot_value = get_camelot_key(camelot_input_str) # e.g., "01A"
+    display_camelot_value = format_camelot_for_display(sortable_camelot_value) # e.g., "1A"
 
-    # This line replaces the raw DB tuple in db_songs list with the display tuple
-    db_songs[i] = (
-        original_db_tuple[0],  # filename
-        original_db_tuple[1],  # song name
-        original_db_tuple[2],  # artist
-        original_db_tuple[3],  # year
-        Genres(original_db_tuple[4]).name,  # genre name
-        key_name_str,  # key name
-        mode_name_str,  # mode name
-        original_db_tuple[7],  # bpm
-        enabled_string,       # calculated enabled string
-        star_string,          # calculated rating string
-        original_db_tuple[10], # notes from DB
-        original_db_tuple[11], # author from DB
-        camelot_value_str      # NEW: Camelot Key
-    )
-    songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
+    processed_songs_for_treeview_initial.append((
+        original_db_tuple[0],
+        original_db_tuple[1],
+        original_db_tuple[2],
+        original_db_tuple[3],
+        Genres(original_db_tuple[4]).name,
+        key_name_str,
+        mode_name_str,
+        original_db_tuple[7],
+        enabled_string,
+        star_string,
+        original_db_tuple[10], 
+        original_db_tuple[11], 
+        display_camelot_value 
+    ))
+
+for i, song_display_tuple in enumerate(processed_songs_for_treeview_initial):
+    songs_table_tree.insert(parent="", index='end', iid=i, text="", values=song_display_tuple)
+
 
 manager_update_check()
 
