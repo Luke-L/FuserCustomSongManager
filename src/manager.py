@@ -1,22 +1,32 @@
 from manager_classes import Song, ProgramProperties
 from program_enums import Genres, SongMode, SongKey, LauncherType
+from camelot_utils import add_camelot_to_song_data
+from custom_treeview import MyTreeview
+from song_extract import extract_song
 from loader import *
+
 import tkinter as tk
 from tkinter import simpledialog
 from tkinter import messagebox
 from tkinter import filedialog as fd
 import tkinter.ttk as ttk
-from custom_treeview import MyTreeview
-from song_extract import extract_song
+import io
 import shutil
 import subprocess
 import time
 import os
 import sys
+import pathlib
+import configparser
 import re
 from configparser import ConfigParser
 import webbrowser
 from update_checker import check_for_update
+from PIL import Image, ImageTk
+from PyQt5.QtGui    import QPixmap
+from PyQt5.QtWidgets import QLabel
+from PyQt5.QtCore   import Qt
+
 
 # FUSER CUSTOM SONG MANAGER, by Lilly :)
 version_number = "1.1.2"
@@ -551,6 +561,49 @@ except PermissionError as e:
     sys.exit()
 db_file_path = db_file_path / 'songs.sqlite'
 
+custom_songs_directory = None
+config = configparser.ConfigParser()
+
+# Check if the config file exists and read it
+if config_file_path.exists():
+    try:
+        config.read(config_file_path)
+        # Assuming the custom songs path is stored in a section [Paths]
+        # with a key 'CustomSongsDir' as is common. Adjust if necessary.
+        if 'Paths' in config and 'CustomSongsDir' in config['Paths']:
+            custom_songs_directory = config['Paths']['CustomSongsDir']
+            print(f"Read custom songs directory from config: {custom_songs_directory}")
+        else:
+            print(f"Config file '{config_file_path}' found, but 'Paths' section or 'CustomSongsDir' key missing.")
+    except configparser.Error as e:
+        print(f"Error reading config file '{config_file_path}': {e}")
+else:
+    print(f"Config file not found at '{config_file_path}'. The executable might need to be run first to create it.")
+
+# If the custom songs directory was found in the config, list the .pak files
+if custom_songs_directory:
+    songs_path = pathlib.Path(custom_songs_directory)
+    if songs_path.is_dir():
+        print(f"\nScanning directory for song files: {songs_path}")
+        found_songs = False
+        try:
+            for item in songs_path.iterdir():
+                if item.is_file() and item.suffix == '.pak':
+                    print(f"Found song file: {item.name}")
+                    found_songs = True
+        except PermissionError:
+             print(f"Permission denied to access directory: {songs_path}")
+        except OSError as e:
+             print(f"Error accessing directory {songs_path}: {e}")
+
+        if not found_songs:
+            print("No .pak song files found in the specified directory.")
+    else:
+        print(f"Configured custom songs path is not a directory or does not exist: {songs_path}")
+else:
+    print("Custom songs directory not set in configuration.")
+
+
 window = tk.Tk()
 window.iconbitmap("gui_icons/program_icon.ico")
 window.title("Fuser Custom Song Manager")
@@ -561,6 +614,19 @@ window.grid_rowconfigure(1, weight=1)
 window.grid_columnconfigure(0, weight=1)
 
 # Top row button functionality
+# def get_album_art_image(pak_path):
+#     try:
+#         from zipfile import ZipFile
+#         with ZipFile(pak_path, 'r') as z:
+#             for name in z.namelist():
+#                 if name.lower().endswith(('.png','jpg','jpeg')):
+#                     data = z.read(name)
+#                     img = Image.open(io.BytesIO(data))
+#                     img.thumbnail((120,120), Image.ANTIALIAS)
+#                     return ImageTk.PhotoImage(img)
+#     except Exception:
+#         pass
+#     return None
 
 # Refresh song list on demand
 def refresh_list(clear_button):
@@ -587,6 +653,20 @@ def refresh_list(clear_button):
         enabled_string = "☑" if (db_songs[i][8] == 1) else "☐"
         db_songs[i] = (db_songs[i][0], db_songs[i][1], db_songs[i][2], db_songs[i][3], Genres(db_songs[i][4]).name, SongKey(db_songs[i][5]).name, SongMode(db_songs[i][6]).name, db_songs[i][7], enabled_string, star_string, db_songs[i][10], db_songs[i][11])
         songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
+        # pak_file = os.path.join(prog_properties.enabled_directory, db_songs[i][0] + ".pak")
+        # img = get_album_art_image(pak_file)
+        # if not hasattr(songs_table_tree, 'images'):
+        #     songs_table_tree.images = {}
+        # songs_table_tree.images[i] = img
+
+        # then insert with image=…
+        # songs_table_tree.insert(
+        #     "",
+        #     "end",
+        #     iid=i,
+        #     image=img,
+        #     values=db_songs[i]
+        # )
     
 
 # Launches the game and deletes custom song cache if it exists
@@ -796,6 +876,14 @@ def start_search(clear_button):
             #db_songs[i][6] = SongMode(db_songs[i][6]).value
             #db_songs[i][8] = True if (db_songs[i][8] == 1) else False
             songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
+
+            # songs_table_tree.insert(
+            #     "",
+            #     "end",
+            #     iid=i,
+            #     image=img,
+            #     values=db_songs[i]
+            # )
         # enable clear button
         clear_button.configure(state='enabled')
     
@@ -818,6 +906,18 @@ def clear_search(clear_button):
             #db_songs[i][6] = SongMode(db_songs[i][6]).value
             #db_songs[i][8] = True if (db_songs[i][8] == 1) else False
             songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
+            # pak_file = os.path.join(prog_properties.enabled_directory,
+            #             db_songs[i][0] + ".pak")
+            # img = get_album_art_image(pak_file)
+            # if not hasattr(songs_table_tree, 'images'):
+            #     songs_table_tree.images = {}
+            # songs_table_tree.images[i] = img
+
+            # # then insert with image=…
+            # songs_table_tree.insert(
+            #     parent="", index='end', iid=i,
+            #     text="", image=img, values=db_songs[i]
+            # )
     # disable clear button
     clear_button.configure(state='disabled')
 
@@ -950,8 +1050,10 @@ songs_table_tree.column("Rating", anchor=tk.CENTER, width=80)
 songs_table_tree.column("Notes", anchor=tk.W, width=200)
 songs_table_tree.column("Author", anchor=tk.W, width=120)
 # Headings for song table
+# songs_table_tree.heading("#0", text="Album Art", anchor=tk.W)
 songs_table_tree.heading("#0", text="", anchor=tk.W)
 songs_table_tree.heading("Filename", text="Filename", sort_by='name', anchor=tk.W)
+# songs_table_tree.heading("Image", text="Image", sort_by='name', anchor=tk.W)
 songs_table_tree.heading("Song Name", text="Song Name", sort_by='name_ignore_words', anchor=tk.W)
 songs_table_tree.heading("Artist", text="Artist", sort_by='name_ignore_words', anchor=tk.W)
 songs_table_tree.heading("Year", text="Year", sort_by='num', anchor=tk.W)
@@ -1330,6 +1432,21 @@ for i in range(len(db_songs)):
     #db_songs[i][6] = SongMode(db_songs[i][6]).name
     #db_songs[i][8] = True if (db_songs[i][8] == 1) else False
     songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
+    # pak_file = os.path.join(prog_properties.enabled_directory,
+    #                     db_songs[i][0] + ".pak")
+    # img = get_album_art_image(pak_file)
+    # if not hasattr(songs_table_tree, 'images'):
+    #     songs_table_tree.images = {}
+    # songs_table_tree.images[i] = img
+
+    # then insert with image=…
+    # songs_table_tree.insert(
+    #     "",
+    #     "end",
+    #     iid=i,
+    #     image=img,
+    #     values=db_songs[i]
+    # )
 
 manager_update_check()
 
