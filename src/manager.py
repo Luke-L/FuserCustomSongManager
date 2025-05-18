@@ -1,35 +1,26 @@
 from manager_classes import Song, ProgramProperties
 from program_enums import Genres, SongMode, SongKey, LauncherType
-from camelot_utils import add_camelot_to_song_data
-from custom_treeview import MyTreeview
-from song_extract import extract_song
 from loader import *
-
 import tkinter as tk
 from tkinter import simpledialog
 from tkinter import messagebox
 from tkinter import filedialog as fd
 import tkinter.ttk as ttk
-import io
+from custom_treeview import MyTreeview
+from song_extract import extract_song
 import shutil
 import subprocess
 import time
 import os
 import sys
-import pathlib
-import configparser
 import re
 from configparser import ConfigParser
 import webbrowser
 from update_checker import check_for_update
-from PIL import Image, ImageTk
-from PyQt5.QtGui    import QPixmap
-from PyQt5.QtWidgets import QLabel
-from PyQt5.QtCore   import Qt
-
+from camelot_utils import get_camelot_key # Added import
 
 # FUSER CUSTOM SONG MANAGER, by Lilly :)
-version_number = "1.1.2"
+version_number = "1.1.2" # Consider updating if this is a new version with this change
 
 # global debug constant
 DEBUG = False
@@ -112,11 +103,11 @@ class SongEditDialog(simpledialog.Dialog):
         ttk.Label(master, text=self.song_info[4], anchor=tk.W).grid(row=1, column=4, sticky= 'W', padx=width_padding)
         ttk.Label(master, text=self.song_info[5], anchor=tk.W).grid(row=1, column=5, sticky= 'W', padx=width_padding)
         ttk.Label(master, text=self.song_info[6], anchor=tk.W).grid(row=1, column=6, sticky= 'W', padx=width_padding)
-        ttk.Label(master, text=self.song_info[7], anchor=tk.W).grid(row=1, column=7, sticky= 'W', padx=width_padding)
+        ttk.Label(master, text=self.song_info[7], anchor=tk.W).grid(row=1, column=7, sticky= 'W', padx=width_padding) # This is BPM (original index 7)
 
         entry_section = tk.Frame(master)
         #have dropdown for selecting rating and tickbox for whether or not the song should be enabled
-        self.is_enabled_var = tk.BooleanVar(value=checkbox_to_bool(self.song_info[8]))
+        self.is_enabled_var = tk.BooleanVar(value=checkbox_to_bool(self.song_info[8])) # Enabled? (original index 8)
         #print(self.song_info)
         #is_enabled_var.set() #☑☐
         self.is_enabled_checkbutton = ttk.Checkbutton(entry_section, text="Enabled?", variable=self.is_enabled_var)
@@ -139,7 +130,7 @@ class SongEditDialog(simpledialog.Dialog):
                                             '★★★★★')
         ttk.Label(entry_section, text="Rating:", justify="right").grid(row=0, column=1, padx=(10, 0), pady=height_padding, sticky='e')
         self.rating_combobox.grid(row=0, column=2, pady=height_padding, sticky='w')
-        self.rating_combobox.current(text_to_rating_int(self.song_info[9]))
+        self.rating_combobox.current(text_to_rating_int(self.song_info[9])) # Rating (original index 9)
 
         #notes: self.song_info[10]
         #author: self.song_info[11]
@@ -148,11 +139,11 @@ class SongEditDialog(simpledialog.Dialog):
         notes_frame = ttk.Frame(entry_section)
         self.author_entry = ttk.Entry(entry_section)
         self.author_entry.delete(0, tk.END)
-        self.author_entry.insert(0, self.song_info[11])
+        self.author_entry.insert(0, self.song_info[11]) # Author (original index 11)
         ttk.Label(notes_frame, text="Notes:", justify="left").grid(row=0, column=0, sticky='w')
         self.notes_entry = tk.Text(notes_frame)
         self.notes_entry.delete("1.0", tk.END)
-        self.notes_entry.insert("1.0", self.song_info[10])
+        self.notes_entry.insert("1.0", self.song_info[10]) # Notes (original index 10)
         self.notes_entry.grid(row=1, column=0)
 
         ttk.Label(entry_section, text="Author:", justify="right").grid(row=0, column=3, padx=(10, 0), pady=height_padding, sticky='e')
@@ -561,72 +552,16 @@ except PermissionError as e:
     sys.exit()
 db_file_path = db_file_path / 'songs.sqlite'
 
-custom_songs_directory = None
-config = configparser.ConfigParser()
-
-# Check if the config file exists and read it
-if config_file_path.exists():
-    try:
-        config.read(config_file_path)
-        # Assuming the custom songs path is stored in a section [Paths]
-        # with a key 'CustomSongsDir' as is common. Adjust if necessary.
-        if 'Paths' in config and 'CustomSongsDir' in config['Paths']:
-            custom_songs_directory = config['Paths']['CustomSongsDir']
-            print(f"Read custom songs directory from config: {custom_songs_directory}")
-        else:
-            print(f"Config file '{config_file_path}' found, but 'Paths' section or 'CustomSongsDir' key missing.")
-    except configparser.Error as e:
-        print(f"Error reading config file '{config_file_path}': {e}")
-else:
-    print(f"Config file not found at '{config_file_path}'. The executable might need to be run first to create it.")
-
-# If the custom songs directory was found in the config, list the .pak files
-if custom_songs_directory:
-    songs_path = pathlib.Path(custom_songs_directory)
-    if songs_path.is_dir():
-        print(f"\nScanning directory for song files: {songs_path}")
-        found_songs = False
-        try:
-            for item in songs_path.iterdir():
-                if item.is_file() and item.suffix == '.pak':
-                    print(f"Found song file: {item.name}")
-                    found_songs = True
-        except PermissionError:
-             print(f"Permission denied to access directory: {songs_path}")
-        except OSError as e:
-             print(f"Error accessing directory {songs_path}: {e}")
-
-        if not found_songs:
-            print("No .pak song files found in the specified directory.")
-    else:
-        print(f"Configured custom songs path is not a directory or does not exist: {songs_path}")
-else:
-    print("Custom songs directory not set in configuration.")
-
-
 window = tk.Tk()
 window.iconbitmap("gui_icons/program_icon.ico")
 window.title("Fuser Custom Song Manager")
 window.resizable(width = 1, height = 1)
-window.geometry('1400x720')
+window.geometry('1480x720') # Adjusted width slightly for new column
 #window.grid_rowconfigure(0, weight=1)
 window.grid_rowconfigure(1, weight=1)
 window.grid_columnconfigure(0, weight=1)
 
 # Top row button functionality
-# def get_album_art_image(pak_path):
-#     try:
-#         from zipfile import ZipFile
-#         with ZipFile(pak_path, 'r') as z:
-#             for name in z.namelist():
-#                 if name.lower().endswith(('.png','jpg','jpeg')):
-#                     data = z.read(name)
-#                     img = Image.open(io.BytesIO(data))
-#                     img.thumbnail((120,120), Image.ANTIALIAS)
-#                     return ImageTk.PhotoImage(img)
-#     except Exception:
-#         pass
-#     return None
 
 # Refresh song list on demand
 def refresh_list(clear_button):
@@ -649,24 +584,32 @@ def refresh_list(clear_button):
 
     # fill out tree view
     for i in range(len(db_songs)):
-        star_string = rating_to_star_text(db_songs[i][9])
-        enabled_string = "☑" if (db_songs[i][8] == 1) else "☐"
-        db_songs[i] = (db_songs[i][0], db_songs[i][1], db_songs[i][2], db_songs[i][3], Genres(db_songs[i][4]).name, SongKey(db_songs[i][5]).name, SongMode(db_songs[i][6]).name, db_songs[i][7], enabled_string, star_string, db_songs[i][10], db_songs[i][11])
-        songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
-        # pak_file = os.path.join(prog_properties.enabled_directory, db_songs[i][0] + ".pak")
-        # img = get_album_art_image(pak_file)
-        # if not hasattr(songs_table_tree, 'images'):
-        #     songs_table_tree.images = {}
-        # songs_table_tree.images[i] = img
+        original_db_tuple = db_songs[i]
 
-        # then insert with image=…
-        # songs_table_tree.insert(
-        #     "",
-        #     "end",
-        #     iid=i,
-        #     image=img,
-        #     values=db_songs[i]
-        # )
+        star_string = rating_to_star_text(original_db_tuple[9])
+        enabled_string = "☑" if (original_db_tuple[8] == 1) else "☐"
+
+        key_name_str = SongKey(original_db_tuple[5]).name
+        mode_name_str = SongMode(original_db_tuple[6]).name
+        camelot_input_str = f"{key_name_str} {mode_name_str}"
+        camelot_value_str = get_camelot_key(camelot_input_str)
+
+        db_songs[i] = (
+            original_db_tuple[0],  # filename
+            original_db_tuple[1],  # song name
+            original_db_tuple[2],  # artist
+            original_db_tuple[3],  # year
+            Genres(original_db_tuple[4]).name,  # genre name
+            key_name_str,  # key name
+            mode_name_str,  # mode name
+            original_db_tuple[7],  # bpm
+            enabled_string,       # calculated
+            star_string,          # calculated
+            original_db_tuple[10], # notes
+            original_db_tuple[11], # author
+            camelot_value_str      # NEW: Camelot Key
+        )
+        songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
     
 
 # Launches the game and deletes custom song cache if it exists
@@ -791,17 +734,31 @@ def add_song(treeview, prog_properties):
     # refill treeview items
     db_songs = execute_db_read_query(connection, "SELECT * from songs ORDER BY filename")
     for i in range(len(db_songs)):
-        #print(db_songs[i][0])
-        #print(db_songs[i])
+        original_db_tuple = db_songs[i]
         
-        #star_string = "★" * db_songs[i][9] 
-        star_string = rating_to_star_text(db_songs[i][9])
-        enabled_string = "☑" if (db_songs[i][8] == 1) else "☐"
-        db_songs[i] = (db_songs[i][0], db_songs[i][1], db_songs[i][2], db_songs[i][3], Genres(db_songs[i][4]).name, SongKey(db_songs[i][5]).name, SongMode(db_songs[i][6]).name, db_songs[i][7], enabled_string, star_string, db_songs[i][10], db_songs[i][11])
-        #db_songs[i][4] = Genres(db_songs[i][4]).value
-        #db_songs[i][5] = SongKey(db_songs[i][5]).value
-        #db_songs[i][6] = SongMode(db_songs[i][6]).value
-        #db_songs[i][8] = True if (db_songs[i][8] == 1) else False
+        star_string = rating_to_star_text(original_db_tuple[9])
+        enabled_string = "☑" if (original_db_tuple[8] == 1) else "☐"
+
+        key_name_str = SongKey(original_db_tuple[5]).name
+        mode_name_str = SongMode(original_db_tuple[6]).name
+        camelot_input_str = f"{key_name_str} {mode_name_str}"
+        camelot_value_str = get_camelot_key(camelot_input_str)
+        
+        db_songs[i] = (
+            original_db_tuple[0],  # filename
+            original_db_tuple[1],  # song name
+            original_db_tuple[2],  # artist
+            original_db_tuple[3],  # year
+            Genres(original_db_tuple[4]).name,  # genre name
+            key_name_str,  # key name
+            mode_name_str,  # mode name
+            original_db_tuple[7],  # bpm
+            enabled_string,       # calculated
+            star_string,          # calculated
+            original_db_tuple[10], # notes
+            original_db_tuple[11], # author
+            camelot_value_str      # NEW: Camelot Key
+        )
         treeview.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
 
     connection.close()
@@ -865,25 +822,32 @@ def start_search(clear_button):
         # repopulate tree view with results from query
         db_songs = execute_db_read_query(db_connection, d.result)
         for i in range(len(db_songs)):
-            print(db_songs[i][0])
-            #print(db_songs[i])
-            #star_string = "★" * db_songs[i][9]
-            star_string = rating_to_star_text(db_songs[i][9])
-            enabled_string = "☑" if (db_songs[i][8] == 1) else "☐"
-            db_songs[i] = (db_songs[i][0], db_songs[i][1], db_songs[i][2], db_songs[i][3], Genres(db_songs[i][4]).name, SongKey(db_songs[i][5]).name, SongMode(db_songs[i][6]).name, db_songs[i][7], enabled_string, star_string, db_songs[i][10], db_songs[i][11])
-            #db_songs[i][4] = Genres(db_songs[i][4]).value
-            #db_songs[i][5] = SongKey(db_songs[i][5]).value
-            #db_songs[i][6] = SongMode(db_songs[i][6]).value
-            #db_songs[i][8] = True if (db_songs[i][8] == 1) else False
-            songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
+            original_db_tuple = db_songs[i]
+            
+            star_string = rating_to_star_text(original_db_tuple[9])
+            enabled_string = "☑" if (original_db_tuple[8] == 1) else "☐"
 
-            # songs_table_tree.insert(
-            #     "",
-            #     "end",
-            #     iid=i,
-            #     image=img,
-            #     values=db_songs[i]
-            # )
+            key_name_str = SongKey(original_db_tuple[5]).name
+            mode_name_str = SongMode(original_db_tuple[6]).name
+            camelot_input_str = f"{key_name_str} {mode_name_str}"
+            camelot_value_str = get_camelot_key(camelot_input_str)
+
+            db_songs[i] = (
+                original_db_tuple[0],  # filename
+                original_db_tuple[1],  # song name
+                original_db_tuple[2],  # artist
+                original_db_tuple[3],  # year
+                Genres(original_db_tuple[4]).name,  # genre name
+                key_name_str,  # key name
+                mode_name_str,  # mode name
+                original_db_tuple[7],  # bpm
+                enabled_string,       # calculated
+                star_string,          # calculated
+                original_db_tuple[10], # notes
+                original_db_tuple[11], # author
+                camelot_value_str      # NEW: Camelot Key
+            )
+            songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
         # enable clear button
         clear_button.configure(state='enabled')
     
@@ -895,29 +859,32 @@ def clear_search(clear_button):
     # repopulate tree view with results from query "SELECT * from songs"
     db_songs = execute_db_read_query(db_connection, "SELECT * from songs ORDER BY filename")
     for i in range(len(db_songs)):
-            print(db_songs[i][0])
-            #print(db_songs[i])
-            #star_string = "★" * db_songs[i][9]
-            star_string = rating_to_star_text(db_songs[i][9])
-            enabled_string = "☑" if (db_songs[i][8] == 1) else "☐"
-            db_songs[i] = (db_songs[i][0], db_songs[i][1], db_songs[i][2], db_songs[i][3], Genres(db_songs[i][4]).name, SongKey(db_songs[i][5]).name, SongMode(db_songs[i][6]).name, db_songs[i][7], enabled_string, star_string, db_songs[i][10], db_songs[i][11])
-            #db_songs[i][4] = Genres(db_songs[i][4]).value
-            #db_songs[i][5] = SongKey(db_songs[i][5]).value
-            #db_songs[i][6] = SongMode(db_songs[i][6]).value
-            #db_songs[i][8] = True if (db_songs[i][8] == 1) else False
-            songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
-            # pak_file = os.path.join(prog_properties.enabled_directory,
-            #             db_songs[i][0] + ".pak")
-            # img = get_album_art_image(pak_file)
-            # if not hasattr(songs_table_tree, 'images'):
-            #     songs_table_tree.images = {}
-            # songs_table_tree.images[i] = img
+        original_db_tuple = db_songs[i]
 
-            # # then insert with image=…
-            # songs_table_tree.insert(
-            #     parent="", index='end', iid=i,
-            #     text="", image=img, values=db_songs[i]
-            # )
+        star_string = rating_to_star_text(original_db_tuple[9])
+        enabled_string = "☑" if (original_db_tuple[8] == 1) else "☐"
+
+        key_name_str = SongKey(original_db_tuple[5]).name
+        mode_name_str = SongMode(original_db_tuple[6]).name
+        camelot_input_str = f"{key_name_str} {mode_name_str}"
+        camelot_value_str = get_camelot_key(camelot_input_str)
+
+        db_songs[i] = (
+            original_db_tuple[0],  # filename
+            original_db_tuple[1],  # song name
+            original_db_tuple[2],  # artist
+            original_db_tuple[3],  # year
+            Genres(original_db_tuple[4]).name,  # genre name
+            key_name_str,  # key name
+            mode_name_str,  # mode name
+            original_db_tuple[7],  # bpm
+            enabled_string,       # calculated
+            star_string,          # calculated
+            original_db_tuple[10], # notes
+            original_db_tuple[11], # author
+            camelot_value_str      # NEW: Camelot Key
+        )
+        songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
     # disable clear button
     clear_button.configure(state='disabled')
 
@@ -1034,7 +1001,7 @@ songs_hori_scrollbar.pack(side='bottom', fill='x')
 songs_table_tree.configure(xscrollcommand=songs_hori_scrollbar.set)
 
 # Defining table columns
-songs_table_tree['columns'] = ("Filename", "Song Name", "Artist", "Year", "Genre", "Key", "Mode", "BPM", "Enabled?", "Rating", "Notes", "Author")
+songs_table_tree['columns'] = ("Filename", "Song Name", "Artist", "Year", "Genre", "Key", "Mode", "BPM", "Enabled?", "Rating", "Notes", "Author", "Camelot Key") # Added "Camelot Key"
 # Column formatting
 songs_table_tree.column("#0", width=0, stretch=tk.NO)
 songs_table_tree.column("Filename", anchor=tk.W, width=240)
@@ -1049,11 +1016,11 @@ songs_table_tree.column("Enabled?", anchor=tk.CENTER, width=60)
 songs_table_tree.column("Rating", anchor=tk.CENTER, width=80)
 songs_table_tree.column("Notes", anchor=tk.W, width=200)
 songs_table_tree.column("Author", anchor=tk.W, width=120)
+songs_table_tree.column("Camelot Key", anchor=tk.W, width=80) # Added definition for Camelot Key column
+
 # Headings for song table
-# songs_table_tree.heading("#0", text="Album Art", anchor=tk.W)
 songs_table_tree.heading("#0", text="", anchor=tk.W)
 songs_table_tree.heading("Filename", text="Filename", sort_by='name', anchor=tk.W)
-# songs_table_tree.heading("Image", text="Image", sort_by='name', anchor=tk.W)
 songs_table_tree.heading("Song Name", text="Song Name", sort_by='name_ignore_words', anchor=tk.W)
 songs_table_tree.heading("Artist", text="Artist", sort_by='name_ignore_words', anchor=tk.W)
 songs_table_tree.heading("Year", text="Year", sort_by='num', anchor=tk.W)
@@ -1065,11 +1032,12 @@ songs_table_tree.heading("Enabled?", text="Enabled?", sort_by='name', anchor=tk.
 songs_table_tree.heading("Rating", text="Rating", sort_by='name', anchor=tk.W)
 songs_table_tree.heading("Notes", text="Notes", sort_by='name', anchor=tk.W)
 songs_table_tree.heading("Author", text="Author", sort_by='name', anchor=tk.W)
+songs_table_tree.heading("Camelot Key", text="Camelot Key", sort_by='name', anchor=tk.W) # Added heading for Camelot Key
 
-for item in songs_table_tree['columns']:
+for item in songs_table_tree['columns']: # This loop will now include "Camelot Key"
     songs_table_tree.heading(item, text=item, anchor=tk.W)
 
-#songs_table_tree.insert(parent="", index='end', iid=0, text="", values=("File_name_P", "The Song", "The Artist", 2023, "Dance", "Db", "Major", 120, "☐", "★★★★", "blah blah", "Me :)"))
+#songs_table_tree.insert(parent="", index='end', iid=0, text="", values=("File_name_P", "The Song", "The Artist", 2023, "Dance", "Db", "Major", 120, "☐", "★★★★", "blah blah", "Me :)", "3B")) # Example if needed
 
 # extra window setup for handling inputs
 def do_treeview_rmb_popup(e):
@@ -1093,11 +1061,12 @@ def do_treeview_rmb_popup(e):
 
 # Responsible for updating row visually and moving files as needed
 def update_row(iid, song_info, updated_info, check_if_fuser_running):
-    new_song_info = list(song_info)
-    new_song_info[8] = bool_to_checkbox_text(updated_info[0])
-    new_song_info[9] = updated_info[1]
-    new_song_info[10] = updated_info[2]
-    new_song_info[11] = updated_info[3]
+    new_song_info = list(song_info) # song_info is now the 13-element tuple
+    new_song_info[8] = bool_to_checkbox_text(updated_info[0]) # Index 8 is "Enabled?"
+    new_song_info[9] = updated_info[1] # Index 9 is "Rating"
+    new_song_info[10] = updated_info[2] # Index 10 is "Notes"
+    new_song_info[11] = updated_info[3] # Index 11 is "Author"
+    # Camelot Key at index 12 is not editable here, so it remains from original song_info
 
     if (check_if_fuser_running):
         if (process_exists_2(fuser_process_name, fuser_alt_process_name) and checkbox_to_bool(song_info[8]) != checkbox_to_bool(new_song_info[8])):
@@ -1112,7 +1081,7 @@ def update_row(iid, song_info, updated_info, check_if_fuser_running):
     actual_file_folder_path = None
     song_subfolders = None
     # if file is in enabled directory, find full path to file here
-    if (checkbox_to_bool(song_info[8])):
+    if (checkbox_to_bool(song_info[8])): # song_info[8] is "Enabled?"
         actual_file_folder_path = get_folder_path_to_file(song_info[0] + ".pak", prog_properties.enabled_directory)
     else:
         actual_file_folder_path = get_folder_path_to_file(song_info[0] + ".pak", prog_properties.disabled_directory)
@@ -1153,7 +1122,7 @@ def update_row(iid, song_info, updated_info, check_if_fuser_running):
             new_song_info[8] = bool_to_checkbox_text(False)
             new_song_info = tuple(new_song_info)
             songs_table_tree.item(iid, text="", values=new_song_info)
-            update_row_in_db(new_song_info)
+            update_row_in_db(new_song_info) # new_song_info still has 13 elements
         return
 
     new_song_info = tuple(new_song_info)
@@ -1165,7 +1134,7 @@ def update_row(iid, song_info, updated_info, check_if_fuser_running):
         old_pak_file = new_pak_file = old_sig_file = new_sig_file = ""
         old_pak_file = actual_file_folder_path + "\\" + song_info[0] + ".pak"
         old_sig_file = actual_file_folder_path + "\\" + song_info[0] + ".sig"
-        if updated_info[0]:
+        if updated_info[0]: # updated_info[0] is the new_enabled_state (boolean)
             # move to enabled folder if it's not already there
             if (len(song_subfolders) > 0):
                 new_pak_file = prog_properties.enabled_directory + "\\" + song_subfolders + "\\" + song_info[0] + ".pak"
@@ -1193,21 +1162,22 @@ def update_row(iid, song_info, updated_info, check_if_fuser_running):
     songs_table_tree.item(iid, text="", values=new_song_info)
     
     # only updates once an item in new_song_info doesn't match with song_info (the old song info)
-    for i in range(len(song_info)):
-        # skip the first 8 items to avoid accidental updates
-        if (i >= 0 and i <= 7):
-            pass
-        if (song_info[i] != new_song_info[i]):
-            update_row_in_db(new_song_info)
+    # Compare only the editable fields (indices 8, 9, 10, 11 of the 13-element tuple)
+    if (song_info[8] != new_song_info[8] or \
+        song_info[9] != new_song_info[9] or \
+        song_info[10] != new_song_info[10] or \
+        song_info[11] != new_song_info[11]):
+        update_row_in_db(new_song_info) # new_song_info is the 13-element tuple
 
 # Responsible for updating the row in the database
-def update_row_in_db(song_info):
+def update_row_in_db(song_info): # song_info is the 13-element tuple from display
     #rather than updating row by row, we should update all of the new columns respectively
     song_shortname = song_info[0]
-    enabled_state = 1 if song_info[8] == "☑" else 0
-    rating = text_to_rating_int(song_info[9])
-    new_notes = song_info[10].replace("'", "''")
-    new_author = song_info[11].replace("'", "''")
+    enabled_state = 1 if song_info[8] == "☑" else 0 # Index 8 is "Enabled?"
+    rating = text_to_rating_int(song_info[9]) # Index 9 is "Rating"
+    new_notes = song_info[10].replace("'", "''") # Index 10 is "Notes"
+    new_author = song_info[11].replace("'", "''") # Index 11 is "Author"
+    # Camelot key (song_info[12]) is not stored in the DB by this function
     execute_db_query(db_connection, f"UPDATE songs SET enabled = {enabled_state}, rating = {rating}, notes = '{new_notes}', author = '{new_author}' WHERE filename = '{song_shortname}'")
     read = execute_db_read_query(db_connection, f"SELECT * from songs WHERE filename = '{song_shortname}'")
     #print(read)
@@ -1217,48 +1187,35 @@ def edit_song():
     # get iid
     selected_song_iid = songs_table_tree.focus()
     # get info for currently selected row
-    song_info = songs_table_tree.item(selected_song_iid, 'values')
+    song_info = songs_table_tree.item(selected_song_iid, 'values') # This will be the 13-element tuple
     # call songeditdialog
-    d = SongEditDialog(window, song_info)
+    d = SongEditDialog(window, song_info) # Dialog expects indices 0-11 to match old format
     if d.result == None:
         return
-    updated_info = d.result
+    updated_info = d.result # (new_enabled_state, new_rating, new_notes, new_author)
     # update row info
     update_row(selected_song_iid, song_info, updated_info, check_if_fuser_running=True)
 
 def edit_multiple_songs():
     selected_song_iids = songs_table_tree.selection()
-    new_enabled_state = None
-    new_rating = None
-    new_author = None
-    new_notes = None
-    # show popup that gets items as listed above ^
-    song_info = ('Multiple Files', 'Multiple Songs', 'Multiple Artists', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', '☑', '☆☆☆☆☆', '', '')
-    d = SongEditDialog(window, song_info)
+    # For the placeholder song_info for the dialog, we only need the first 12 elements
+    # as the dialog doesn't use the 13th (Camelot key).
+    # However, the number of fields (columns) in the dialog is fixed.
+    # The important part is that indices for Enabled, Rating, Notes, Author are consistent.
+    placeholder_song_info = ('Multiple Files', 'Multiple Songs', 'Multiple Artists', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', '☑', '☆☆☆☆☆', '', '') 
+    # If song_info passed to SongEditDialog had 13 items, it would still work as it only accesses up to index 11.
+    d = SongEditDialog(window, placeholder_song_info) # Pass a representative tuple
     if d.result == None:
         return
-    #print(d.result)
-    updated_info = d.result
+    updated_info = d.result # (new_enabled_state, new_rating, new_notes, new_author)
     messagebox.showinfo("Edit multiple songs", "The program may appear frozen while the data for each song is being saved. Please wait a moment.")
-    # check if fuser is running before doing this loop!
 
     for selected_song_iid in selected_song_iids:
-        song_info = songs_table_tree.item(selected_song_iid, 'values')
-        print(song_info)
-        # self.result = (new_enabled_state, new_rating, new_notes, new_author)
-        # update row info
-        update_row(selected_song_iid, song_info, updated_info, check_if_fuser_running=False)
+        song_info = songs_table_tree.item(selected_song_iid, 'values') # This is the 13-element tuple
+        update_row(selected_song_iid, song_info, updated_info, check_if_fuser_running=False) # No individual Fuser check per song in batch
 
 # Deletes a song from the database, the visual database, and from the filesystem
 def delete_song():
-
-    # Ask user if they're SURE they want to delete this song, as well as presenting info about the song
-    # (mostly just filename, song name and artist name)
-
-    # Mention that in doing so, all data regarding said song WILL be lost (including notes, author and rating)
-
-    # If they say yes, then continue with deleting song.
-    # Otherwise, do NOT delete the song and just quit from this function
     selected_song_iids = songs_table_tree.selection()
     if (len(selected_song_iids) == 0):
         return
@@ -1271,8 +1228,8 @@ def delete_song():
     warn_result = 'no'
 
     for selected_song_iid in selected_song_iids:
-        song_info = songs_table_tree.item(selected_song_iid, 'values')
-        is_enabled = checkbox_to_bool(song_info[8])
+        song_info = songs_table_tree.item(selected_song_iid, 'values') # 13-element tuple
+        # is_enabled = checkbox_to_bool(song_info[8]) # song_info[8] is "Enabled?"
         if (len(selected_song_iids) == 1):
             warning_msg = f"""WARNING: You are about to delete this song:
 
@@ -1300,32 +1257,31 @@ Press YES to delete these songs, or NO to cancel this action.
             print(warn_result)
             warning_message_shown = True
         if (warn_result == 'yes'):
-            # delete that damn file !!
             file_folder_path = None
-            if checkbox_to_bool(song_info[8]):
+            if checkbox_to_bool(song_info[8]): # song_info[8] is "Enabled?"
                 file_folder_path = get_folder_path_to_file(song_info[0] + ".pak", prog_properties.enabled_directory)
             else:
                 file_folder_path = get_folder_path_to_file(song_info[0] + ".pak", prog_properties.disabled_directory)
 
-            if checkbox_to_bool(song_info[8]):
-                if os.path.exists(file_folder_path + f"\\{song_info[0]}.pak"):
-                    os.remove(file_folder_path + f"\\{song_info[0]}.pak")
-                if os.path.exists(file_folder_path + f"\\{song_info[0]}.sig"):
-                    os.remove(file_folder_path + f"\\{song_info[0]}.sig")
+            # This part of file deletion logic should be okay as it uses song_info[0] for filename
+            # and song_info[8] for enabled status, which are consistent.
+            if file_folder_path: # Ensure path was found
+                pak_file = os.path.join(file_folder_path, f"{song_info[0]}.pak")
+                sig_file = os.path.join(file_folder_path, f"{song_info[0]}.sig")
+                if os.path.exists(pak_file):
+                    os.remove(pak_file)
+                if os.path.exists(sig_file):
+                    os.remove(sig_file)
             else:
-                if os.path.exists(file_folder_path + f"\\{song_info[0]}.pak"):
-                    os.remove(file_folder_path + f"\\{song_info[0]}.pak")
-                if os.path.exists(file_folder_path + f"\\{song_info[0]}.sig"):
-                    os.remove(file_folder_path + f"\\{song_info[0]}.sig")
+                print(f"Warning: Could not find path for {song_info[0]}.pak to delete.")
+
 
             # after ensuring the .pak and .sig files are deleted, also ensure to delete the customSongsUnlocked_P.pak and .sig files
             if os.path.exists(prog_properties.pak_directory + "\\customSongsUnlocked_P.pak"):
                 os.remove(prog_properties.pak_directory + "\\customSongsUnlocked_P.pak")
             if os.path.exists(prog_properties.pak_directory + "\\customSongsUnlocked_P.sig"):
                 os.remove(prog_properties.pak_directory + "\\customSongsUnlocked_P.sig")
-            #print("DELETING FILE HERE")
             
-            # after that, delete row from both visual table and from actual database
             execute_db_query(db_connection, f"DELETE FROM songs WHERE filename = '{song_info[0]}'")
             songs_table_tree.delete(selected_song_iid)
 
@@ -1333,39 +1289,32 @@ Press YES to delete these songs, or NO to cancel this action.
 def do_treeview_doubleclick(e):
     item_iid = songs_table_tree.identify_row(e.y)
     if item_iid:
-        # print(item)
-        # display edit menu for given song
-        # get song info before calling songeditdialog
-        # song_info as a tuple V
-        song_info = songs_table_tree.item(item_iid, 'values')
+        song_info = songs_table_tree.item(item_iid, 'values') # 13-element tuple
         d = SongEditDialog(window, song_info)
         if d.result == None:
             return
-        updated_info = d.result
+        updated_info = d.result # (new_enabled_state, new_rating, new_notes, new_author)
         update_row(item_iid, song_info, updated_info, check_if_fuser_running=True)
-        # after returning from dialog, compare resulting values to previous values
-        # if values have changed, write to table and database
     else:
         pass
 
 # Moves a song to the enabled/disabled path and updates the visual and internal databases
 def toggle_song():
     selected_song_iid = songs_table_tree.focus()
-    #print("right clicked item: ", selected_song_iid)
-    selected_song = songs_table_tree.item(selected_song_iid, 'values')
-    song_shortname = selected_song[0]
-    #print(selected_song)
-    song_is_enabled = checkbox_to_bool(selected_song[8])
-    # toggle whether or not the song is enabled
-    new_song_state = not song_is_enabled
-    #new_tuple = list(selected_song)
-    # now we update the row visually, in the file system, and in the database
-    update_row(selected_song_iid, selected_song, (new_song_state, selected_song[9], selected_song[10], selected_song[11]), check_if_fuser_running=True)
-    # now we need to update the database
+    selected_song_values = songs_table_tree.item(selected_song_iid, 'values') # 13-element tuple
     
-    #execute_db_query(db_connection, f"UPDATE songs SET enabled = {1 if new_song_state == True else 0} WHERE filename = '{song_shortname}'")
-    #read = execute_db_read_query(db_connection, f"SELECT * from songs WHERE filename = '{song_shortname}'")
-    #print(read)
+    song_is_enabled = checkbox_to_bool(selected_song_values[8]) # Index 8 is "Enabled?"
+    new_song_state_bool = not song_is_enabled
+    
+    # Create the 4-tuple that update_row expects for changed info
+    # (new_enabled_state_bool, current_rating_str, current_notes_str, current_author_str)
+    updated_info_for_toggle = (
+        new_song_state_bool, 
+        selected_song_values[9], # Rating string
+        selected_song_values[10],# Notes string
+        selected_song_values[11] # Author string
+    )
+    update_row(selected_song_iid, selected_song_values, updated_info_for_toggle, check_if_fuser_running=True)
     
 # adding right click menu
 table_rmb_menu = tk.Menu(tearoff=False)
@@ -1419,34 +1368,36 @@ delete_song_button.configure(command=delete_song)
 
 # init song tree contents
 db_connection = init_database(prog_properties.database_location, prog_properties.enabled_directory, prog_properties.disabled_directory, False)
-db_songs = execute_db_read_query(db_connection, "SELECT * from songs ORDER BY filename")
-for i in range(len(db_songs)):
-    #print(db_songs[i])
-    #star_string = "★" * db_songs[i][9]
-    star_string = rating_to_star_text(db_songs[i][9])
-    enabled_string = "☑" if (db_songs[i][8] == 1) else "☐"
-    db_songs[i] = (db_songs[i][0], db_songs[i][1], db_songs[i][2], db_songs[i][3], Genres(db_songs[i][4]).name, SongKey(db_songs[i][5]).name, SongMode(db_songs[i][6]).name, db_songs[i][7], enabled_string, star_string, db_songs[i][10], db_songs[i][11])
-    # keeping this for future reference
-    #db_songs[i][4] = Genres(db_songs[i][4]).name
-    #db_songs[i][5] = SongKey(db_songs[i][5]).name
-    #db_songs[i][6] = SongMode(db_songs[i][6]).name
-    #db_songs[i][8] = True if (db_songs[i][8] == 1) else False
-    songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
-    # pak_file = os.path.join(prog_properties.enabled_directory,
-    #                     db_songs[i][0] + ".pak")
-    # img = get_album_art_image(pak_file)
-    # if not hasattr(songs_table_tree, 'images'):
-    #     songs_table_tree.images = {}
-    # songs_table_tree.images[i] = img
+db_songs = execute_db_read_query(db_connection, "SELECT * from songs ORDER BY filename") # List of raw DB tuples
 
-    # then insert with image=…
-    # songs_table_tree.insert(
-    #     "",
-    #     "end",
-    #     iid=i,
-    #     image=img,
-    #     values=db_songs[i]
-    # )
+for i in range(len(db_songs)):
+    original_db_tuple = db_songs[i] # Current raw DB tuple for this iteration
+
+    star_string = rating_to_star_text(original_db_tuple[9])
+    enabled_string = "☑" if (original_db_tuple[8] == 1) else "☐"
+
+    key_name_str = SongKey(original_db_tuple[5]).name
+    mode_name_str = SongMode(original_db_tuple[6]).name
+    camelot_input_str = f"{key_name_str} {mode_name_str}"
+    camelot_value_str = get_camelot_key(camelot_input_str)
+
+    # This line replaces the raw DB tuple in db_songs list with the display tuple
+    db_songs[i] = (
+        original_db_tuple[0],  # filename
+        original_db_tuple[1],  # song name
+        original_db_tuple[2],  # artist
+        original_db_tuple[3],  # year
+        Genres(original_db_tuple[4]).name,  # genre name
+        key_name_str,  # key name
+        mode_name_str,  # mode name
+        original_db_tuple[7],  # bpm
+        enabled_string,       # calculated enabled string
+        star_string,          # calculated rating string
+        original_db_tuple[10], # notes from DB
+        original_db_tuple[11], # author from DB
+        camelot_value_str      # NEW: Camelot Key
+    )
+    songs_table_tree.insert(parent="", index='end', iid=i, text="", values=db_songs[i])
 
 manager_update_check()
 
